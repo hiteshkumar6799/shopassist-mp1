@@ -26,8 +26,24 @@ ORDER_ID = re.compile(r"^ORD-\d{5}$")
 METRO_PREFIXES = {"11", "40", "50", "56", "60", "70"}    # Delhi, Mumbai, Hyderabad, Bengaluru, Chennai, Kolkata
 
 
+
 def _find(order_id: str) -> dict:
-    """Look an order up. GIVEN. Raises ValueError for an order that doesn't exist."""
+    """Look an order up. Raises ValueError for invalid or unknown order IDs."""
+
+    # Validate order ID format first
+    if not ORDER_ID.fullmatch(order_id):
+        raise ValueError(
+            f"order_id must look like ORD-12345, got {order_id!r}"
+        )
+
+    # Check whether the order exists
+    if order_id not in ORDERS:
+        raise ValueError(
+            f"no order {order_id} - ask the customer to check the order number"
+        )
+
+    return ORDERS[order_id]
+
     # TODO MP1-T2: validate the FORMAT first. If order_id doesn't match ORDER_ID (like ORD-12345), raise
     #   ValueError(f"order_id must look like ORD-12345, got {order_id!r}")
     # so the model asks the customer to check the number, instead of the tool saying "not found".
@@ -61,6 +77,19 @@ def get_delivery_estimate(pincode: str, speed: str = "standard") -> dict:
     # TODO MP1-T2: validate before answering. Raise ValueError if:
     #   pincode is not exactly 6 digits                      e.g. "50008", "5000811", "abc123"
     #   speed is not "standard" or "express"
+
+    # Validate pincode: exactly 6 digits
+    if not re.fullmatch(r"\d{6}", pincode):
+        raise ValueError(
+            f"pincode must be exactly 6 digits, got {pincode!r}"
+        )
+
+    # Validate delivery speed
+    if speed not in {"standard", "express"}:
+        raise ValueError(
+            f"speed must be 'standard' or 'express', got {speed!r}"
+        )
+
     metro = pincode[:2] in METRO_PREFIXES
     if speed == "express":
         return {"pincode": pincode, "speed": "express", "days": "next day" if metro else "2-3 working days",
@@ -87,6 +116,15 @@ def check_return_eligibility(order_id: str, reason: str) -> dict:
         reason: The reason for the return. Allowed values are wrong_size,
             changed_mind, damaged, defective, wrong_item, and not_as_described.
     """
+
+
+    # Validate return reason
+    if reason not in REASONS:
+        allowed = ", ".join(sorted(REASONS))
+        raise ValueError(
+            f"reason must be one of: {allowed}, got {reason!r}"
+        )
+
     # Find the customer's order
     o = _find(order_id)
 
